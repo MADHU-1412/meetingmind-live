@@ -25,6 +25,7 @@ Auto-generates summary, extracts action items, drafts follow-up emails, saves ev
 
 ---
 
+
 ## Tech Stack
 
 | Layer | Technology |
