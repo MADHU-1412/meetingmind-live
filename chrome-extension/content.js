@@ -3,7 +3,6 @@ let ws = null;
 let sessionId = 'meet_' + Date.now().toString(36);
 let audioStream = null;
 let mediaRecorder = null;
-let recording = false;
 
 function createOverlay() {
   if (document.getElementById('mm-overlay')) return;
@@ -94,9 +93,6 @@ function connectWS() {
       if(s){s.textContent='reconnecting...';s.style.color='';}
       setTimeout(connectWS, 3000);
     };
-    ws.onerror = () => {
-      setTimeout(connectWS, 3000);
-    };
   } catch(e) { setTimeout(connectWS, 3000); }
 }
 
@@ -180,33 +176,42 @@ async function mmStart() {
 
   document.getElementById('mm-form').style.display = 'none';
   document.getElementById('mm-end-btn').style.display = 'block';
-
   await startAudioCapture();
 }
 
 async function startAudioCapture() {
   try {
     audioStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+    mediaRecorder = new MediaRecorder(audioStream);
+    const chunks = [];
 
-    // Use MediaRecorder instead of ScriptProcessor - more reliable
-    mediaRecorder = new MediaRecorder(audioStream, {mimeType: 'audio/webm;codecs=opus'});
-    
-    mediaRecorder.ondataavailable = async (e) => {
-      if (e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const b64 = reader.result.split(',')[1];
-          ws.send(JSON.stringify({type: 'audio_chunk', audio: b64}));
-        };
-        reader.readAsDataURL(e.data);
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      if (chunks.length === 0) return;
+      const blob = new Blob(chunks, {type: 'audio/webm'});
+      chunks.length = 0;
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+      const b64 = btoa(binary);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({type: 'audio_chunk', audio: b64}));
+      }
+      if (audioStream && audioStream.active) {
+        mediaRecorder.start();
+        setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 4000);
       }
     };
 
-    mediaRecorder.start(3000); // Send chunk every 3 seconds
-    recording = true;
-    addAlert('Microphone Active', 'MeetingMind is now listening to the meeting.', '#4ade80', 4000);
+    mediaRecorder.start();
+    setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 4000);
+    addAlert('Microphone Active', 'MeetingMind is now listening.', '#4ade80', 4000);
   } catch(e) {
-    addAlert('Mic Error', 'Allow microphone access and try again. Error: ' + e.message, '#f87171', 0);
+    addAlert('Mic Error', e.message, '#f87171', 0);
     document.getElementById('mm-form').style.display = 'block';
     document.getElementById('mm-end-btn').style.display = 'none';
     const btn = document.getElementById('mm-start-btn');
@@ -218,7 +223,6 @@ function mmEndMeeting() {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'meeting_end'}));
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (audioStream) { audioStream.getTracks().forEach(t=>t.stop()); audioStream=null; }
-  recording = false;
   document.getElementById('mm-form').style.display = 'block';
   document.getElementById('mm-end-btn').style.display = 'none';
   const btn = document.getElementById('mm-start-btn');
