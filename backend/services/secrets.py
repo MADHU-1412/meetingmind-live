@@ -1,4 +1,3 @@
-cat > backend/services/secrets.py << 'EOF'
 import os
 from google.cloud import secretmanager
 from dotenv import load_dotenv
@@ -17,4 +16,3 @@ def get_secret(secret_id: str) -> str:
 
 GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 GCP_PROJECT_ID = get_secret("GCP_PROJECT_ID")
-EOF

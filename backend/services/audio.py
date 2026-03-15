@@ -1,5 +1,4 @@
-cat > backend/services/audio.py << 'EOF'
-import asyncio, struct
+import struct
 from google import genai
 from google.genai import types
 from .secrets import GEMINI_API_KEY
@@ -8,7 +7,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 AUDIO_CONFIG = types.LiveConnectConfig(
     response_modalities=["TEXT"],
-    system_instruction=types.Content(parts=[types.Part(text='You are MeetingMind. Listen to meeting conversations. Respond ONLY in JSON: {"speaker":"Speaker A","text":"what they said","alert_type":"question|wrong_fact|task_assigned|decision|none","alert_message":"what to show host","confidence":0.9}')]),
+    system_instruction=types.Content(parts=[types.Part(text='You are MeetingMind. Respond ONLY in JSON: {"speaker":"Speaker A","text":"what they said","alert_type":"question|wrong_fact|task_assigned|decision|none","alert_message":"","confidence":0.9}')]),
 )
 
 async def process_audio_stream(audio_chunk: bytes, session_id: str) -> dict:
@@ -31,4 +30,3 @@ def detect_silence(audio_chunk: bytes, threshold: float = 0.02) -> bool:
     samples = struct.unpack(f"{len(audio_chunk)//2}h", audio_chunk)
     rms = (sum(s*s for s in samples) / len(samples)) ** 0.5
     return (rms / 32768.0) < threshold
-EOF

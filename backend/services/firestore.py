@@ -1,4 +1,3 @@
-cat > backend/services/firestore.py << 'EOF'
 import os
 from google.cloud import firestore
 from datetime import datetime
@@ -23,4 +22,3 @@ async def append_task(session_id, task):
 
 async def close_session(session_id):
     db.collection("meetingmind_sessions").document(session_id).update({"status": "completed", "ended_at": datetime.utcnow()})
-EOF
