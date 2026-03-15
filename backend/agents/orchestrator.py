@@ -34,22 +34,18 @@ class MeetingOrchestrator:
         """Initialize session and run Phase 1."""
         self.phase = MeetingPhase.PRE_MEETING
 
-        # Create Firestore session
         await create_session(self.session_id, {
             "meeting_title": meeting_info.get("title", "Meeting"),
             "attendees": meeting_info.get("attendees", [])
         })
 
-        # Send Phase 1 status to frontend
         await self._send({
             "type": "phase1_starting",
             "message": "Preparing your briefing..."
         })
 
-        # Run Phase 1
         briefing = await run_phase1(self.session_id, meeting_info)
 
-        # Send briefing to frontend
         await self._send({
             "type": "phase1_complete",
             "briefing": briefing
@@ -66,11 +62,9 @@ class MeetingOrchestrator:
         if self.phase != MeetingPhase.ACTIVE:
             return
 
-        # Add to transcript
         self.transcript.append(audio_result)
         await append_transcript(self.session_id, audio_result)
 
-        # Run Phase 2 battlefield check
         overlay = await run_battlefield_check(
             audio_result,
             self.screen_context,
@@ -102,6 +96,8 @@ class MeetingOrchestrator:
 
     async def end_meeting(self):
         """Transition to Phase 3."""
+        # FIX: previously had orphaned code after a misplaced return.
+        # All Phase 3 logic was unreachable. Fixed indentation below.
         from backend.agents.phase3_agent import run_phase3
 
         self.phase = MeetingPhase.POST_MEETING
@@ -114,11 +110,11 @@ class MeetingOrchestrator:
             "tasks_logged": len(self.tasks)
         })
 
-    # Get attendees from session
+        # Get attendees from session
         session = await get_session(self.session_id)
         attendees = session.get("attendees", [])
 
-    # Run Phase 3
+        # Run Phase 3
         result = await run_phase3(
             self.session_id,
             self.transcript,
@@ -126,7 +122,7 @@ class MeetingOrchestrator:
             attendees
         )
 
-    # Send complete results to frontend
+        # Send complete results to frontend
         await self._send({
             "type": "phase3_complete",
             "result": result
