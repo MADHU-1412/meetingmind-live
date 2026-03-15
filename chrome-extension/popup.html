@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { width:280px; background:#0a0f0c; color:#e2f5e8; font-family:'Inter',sans-serif; padding:16px; }
+  h2 { color:#4ade80; font-size:14px; margin-bottom:8px; }
+  p { font-size:12px; color:rgba(226,245,232,0.6); line-height:1.6; }
+  .status { display:flex; align-items:center; gap:6px; margin-top:12px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#4ade80; }
+  .label { font-size:11px; color:#4ade80; font-family:monospace; }
+  .btn { width:100%; margin-top:12px; padding:9px; background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3); border-radius:6px; color:#4ade80; font-size:11px; cursor:pointer; font-family:monospace; text-transform:uppercase; letter-spacing:0.08em; }
+</style>
+</head>
+<body>
+  <h2>MeetingMind Live</h2>
+  <p>AI agent that assists you silently during Google Meet calls.</p>
+  <div class="status"><div class="dot"></div><span class="label">Active on meet.google.com</span></div>
+  <button class="btn" onclick="window.open('https://meet.google.com')">Open Google Meet</button>
+</body>
+</html>

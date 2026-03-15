@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "MeetingMind Live",
+  "version": "1.0",
+  "description": "AI meeting assistant that watches silently and helps you in real-time",
+  "permissions": ["tabCapture", "activeTab", "scripting", "storage"],
+  "host_permissions": ["https://meet.google.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content.js"],
+      "css": ["overlay.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}
