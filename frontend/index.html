@@ -4,1874 +4,782 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeetingMind Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #080c0a;
-    --surface: rgba(12, 20, 15, 0.92);
-    --glass: rgba(18, 30, 22, 0.85);
-    --border: rgba(80, 200, 120, 0.18);
-    --border-bright: rgba(80, 200, 120, 0.45);
-    --green: #4eca7a;
-    --green-dim: rgba(78, 202, 122, 0.12);
-    --green-mid: rgba(78, 202, 122, 0.3);
-    --amber: #f0a03a;
-    --amber-dim: rgba(240, 160, 58, 0.12);
-    --red: #e05555;
-    --red-dim: rgba(224, 85, 85, 0.12);
-    --blue: #5ab4f0;
-    --blue-dim: rgba(90, 180, 240, 0.12);
-    --text: #d0e8d8;
-    --text-dim: rgba(208, 232, 216, 0.5);
-    --text-faint: rgba(208, 232, 216, 0.25);
-    --mono: 'Space Mono', monospace;
-    --sans: 'DM Sans', sans-serif;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Scanline texture overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  /* Corner brackets */
-  .corner {
-    position: fixed;
-    width: 24px; height: 24px;
-    z-index: 100;
-    opacity: 0.4;
-  }
-  .corner::before, .corner::after {
-    content: '';
-    position: absolute;
-    background: var(--green);
-  }
-  .corner::before { width: 2px; height: 100%; }
-  .corner::after { width: 100%; height: 2px; }
-  .corner.tl { top: 12px; left: 12px; }
-  .corner.tl::before { top: 0; left: 0; }
-  .corner.tl::after { top: 0; left: 0; }
-  .corner.tr { top: 12px; right: 12px; transform: scaleX(-1); }
-  .corner.tr::before { top: 0; left: 0; }
-  .corner.tr::after { top: 0; left: 0; }
-  .corner.bl { bottom: 12px; left: 12px; transform: scaleY(-1); }
-  .corner.bl::before { top: 0; left: 0; }
-  .corner.bl::after { top: 0; left: 0; }
-  .corner.br { bottom: 12px; right: 12px; transform: scale(-1); }
-  .corner.br::before { top: 0; left: 0; }
-  .corner.br::after { top: 0; left: 0; }
-
-  /* TOP STATUS BAR */
-  .topbar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 48px;
-    background: rgba(8, 14, 10, 0.96);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    z-index: 500;
-    backdrop-filter: blur(12px);
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .brand-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse-dot 2s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
-    50% { opacity: 0.4; box-shadow: 0 0 3px var(--green); }
-  }
-
-  .brand-name {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.12em;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-
-  .topbar-meta {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .meta-item {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: 0.06em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .meta-item span {
-    color: var(--green);
-  }
-
-  .topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* MAIN LAYOUT */
-  .layout {
-    display: grid;
-    grid-template-columns: 280px 1fr 280px;
-    grid-template-rows: 48px 1fr 200px;
-    min-height: 100vh;
-    gap: 0;
-  }
-
-  .panel {
-    background: var(--glass);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(16px);
-  }
-
-  /* SIDEBAR LEFT — session info */
-  .sidebar-left {
-    grid-column: 1;
-    grid-row: 2 / 4;
-    border-right: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* MAIN CENTER — overlay zone */
-  .main-zone {
-    grid-column: 2;
-    grid-row: 2;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 24px;
-    gap: 16px;
-  }
-
-  /* TRANSCRIPT — bottom center */
-  .transcript-panel {
-    grid-column: 2;
-    grid-row: 3;
-    border-top: 1px solid var(--border);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* SIDEBAR RIGHT — tasks */
-  .sidebar-right {
-    grid-column: 3;
-    grid-row: 2 / 4;
-    border-left: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* PANEL HEADER */
-  .panel-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-
-  .panel-title {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.16em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-
-  .panel-badge {
-    font-family: var(--mono);
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    background: var(--green-dim);
-    color: var(--green);
-    border: 1px solid rgba(78,202,122,0.2);
-  }
-
-  .panel-badge.amber {
-    background: var(--amber-dim);
-    color: var(--amber);
-    border-color: rgba(240,160,58,0.2);
-  }
-
-  .panel-body {
-    padding: 16px;
-    overflow-y: auto;
-    flex: 1;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  /* SESSION INFO */
-  .meeting-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 4px;
-    line-height: 1.3;
-  }
-
-  .meeting-time {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 16px;
-  }
-
-  .phase-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--green-dim);
-    border: 1px solid rgba(78,202,122,0.2);
-    border-radius: 4px;
-    margin-bottom: 16px;
-  }
-
-  .phase-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--green);
-    animation: pulse-dot 1.5s ease-in-out infinite;
-  }
-
-  .phase-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-
-  .attendees-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 8px;
-  }
-
-  .attendee-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 3px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-dim);
-    margin: 2px;
-  }
-
-  .attendee-chip .speaking {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 5px var(--green);
-    animation: pulse-dot 0.8s ease-in-out infinite;
-  }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 14px 0;
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px 0;
-  }
-
-  .stat-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .stat-value {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-
-  .stat-value.green { color: var(--green); }
-  .stat-value.amber { color: var(--amber); }
-
-  /* BRIEFING BOX */
-  .briefing-box {
-    background: rgba(78,202,122,0.05);
-    border: 1px solid rgba(78,202,122,0.2);
-    border-radius: 4px;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-
-  .briefing-label {
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    color: var(--green);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    opacity: 0.7;
-  }
-
-  .briefing-text {
-    font-size: 11px;
-    color: var(--text);
-    line-height: 1.6;
-  }
-
-  /* CONTROL BUTTONS */
-  .controls {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 9px 14px;
-    border-radius: 3px;
-    border: 1px solid;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .btn-primary {
-    background: var(--green-dim);
-    border-color: rgba(78,202,122,0.4);
-    color: var(--green);
-  }
-  .btn-primary:hover {
-    background: rgba(78,202,122,0.2);
-    border-color: var(--green);
-  }
-
-  .btn-danger {
-    background: var(--red-dim);
-    border-color: rgba(224,85,85,0.3);
-    color: var(--red);
-  }
-  .btn-danger:hover {
-    background: rgba(224,85,85,0.2);
-  }
-
-  .btn-ghost {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--text-dim);
-  }
-  .btn-ghost:hover {
-    border-color: var(--border-bright);
-    color: var(--text);
-  }
-
-  /* ===== ALERT OVERLAYS (main zone) ===== */
-  .alert-card {
-    width: 100%;
-    max-width: 600px;
-    border-radius: 6px;
-    border: 1px solid;
-    overflow: hidden;
-    animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-  }
-
-  @keyframes slide-in {
-    from { opacity: 0; transform: translateY(-12px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  .alert-card.fact-shield {
-    border-color: rgba(224,85,85,0.35);
-    background: linear-gradient(135deg, rgba(224,85,85,0.08) 0%, rgba(8,12,10,0.9) 50%);
-  }
-
-  .alert-card.question {
-    border-color: rgba(90,180,240,0.35);
-    background: linear-gradient(135deg, rgba(90,180,240,0.08) 0%, rgba(8,12,10,0.9) 50%);
-  }
-
-  .alert-card.negotiation {
-    border-color: rgba(240,160,58,0.35);
-    background: linear-gradient(135deg, rgba(240,160,58,0.08) 0%, rgba(8,12,10,0.9) 50%);
-  }
-
-  .alert-card.task {
-    border-color: rgba(78,202,122,0.35);
-    background: linear-gradient(135deg, rgba(78,202,122,0.08) 0%, rgba(8,12,10,0.9) 50%);
-  }
-
-  .alert-stripe {
-    height: 3px;
-    width: 100%;
-  }
-  .fact-shield .alert-stripe { background: var(--red); }
-  .question .alert-stripe { background: var(--blue); }
-  .negotiation .alert-stripe { background: var(--amber); }
-  .task .alert-stripe { background: var(--green); }
-
-  .alert-inner {
-    padding: 14px 16px;
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-  }
-
-  .alert-icon {
-    font-size: 18px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .alert-content { flex: 1; min-width: 0; }
-
-  .alert-layer-tag {
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    opacity: 0.6;
-    margin-bottom: 3px;
-  }
-  .fact-shield .alert-layer-tag { color: var(--red); }
-  .question .alert-layer-tag { color: var(--blue); }
-  .negotiation .alert-layer-tag { color: var(--amber); }
-  .task .alert-layer-tag { color: var(--green); }
-
-  .alert-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 5px;
-    line-height: 1.3;
-  }
-
-  .alert-body {
-    font-size: 12px;
-    color: var(--text-dim);
-    line-height: 1.6;
-    margin-bottom: 10px;
-  }
-
-  .alert-source {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .alert-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
-  }
-
-  .alert-btn {
-    padding: 5px 10px;
-    border-radius: 3px;
-    border: 1px solid;
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.12s;
-  }
-
-  .alert-btn.confirm {
-    background: var(--green-dim);
-    border-color: rgba(78,202,122,0.4);
-    color: var(--green);
-  }
-  .alert-btn.confirm:hover { background: var(--green-mid); }
-
-  .alert-btn.dismiss {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--text-faint);
-  }
-  .alert-btn.dismiss:hover { border-color: var(--border-bright); color: var(--text-dim); }
-
-  .alert-dismiss {
-    position: absolute;
-    top: 10px; right: 10px;
-    width: 20px; height: 20px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--text-faint);
-    font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 2px;
-    transition: all 0.1s;
-  }
-  .alert-dismiss:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-
-  .urgency-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-left: 8px;
-    vertical-align: middle;
-  }
-  .urgency-tag.high { background: rgba(224,85,85,0.15); color: var(--red); }
-  .urgency-tag.medium { background: rgba(240,160,58,0.15); color: var(--amber); }
-  .urgency-tag.low { background: rgba(78,202,122,0.1); color: var(--green); opacity: 0.7; }
-
-  /* EMPTY STATE */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 12px;
-    opacity: 0.35;
-  }
-
-  .empty-icon {
-    font-size: 32px;
-    opacity: 0.5;
-  }
-
-  .empty-text {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    color: var(--text-dim);
-    text-align: center;
-    text-transform: uppercase;
-  }
-
-  /* TRANSCRIPT FEED */
-  .transcript-scroll {
-    overflow-y: auto;
-    flex: 1;
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 6px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .transcript-line {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    animation: fade-up 0.25s ease;
-  }
-  @keyframes fade-up {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .t-speaker {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--green);
-    white-space: nowrap;
-    padding-top: 1px;
-    min-width: 70px;
-  }
-
-  .t-text {
-    font-size: 11px;
-    color: var(--text-dim);
-    line-height: 1.5;
-    flex: 1;
-  }
-
-  .t-time {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    white-space: nowrap;
-    padding-top: 1px;
-  }
-
-  /* TASKS SIDEBAR */
-  .task-item {
-    padding: 10px 12px;
-    border-radius: 4px;
-    background: rgba(255,255,255,0.025);
-    border: 1px solid var(--border);
-    margin-bottom: 8px;
-    position: relative;
-    transition: all 0.15s;
-  }
-
-  .task-item.pending {
-    border-left: 3px solid var(--amber);
-    padding-left: 10px;
-  }
-
-  .task-item.confirmed {
-    border-left: 3px solid var(--green);
-    opacity: 0.6;
-  }
-
-  .task-owner {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--amber);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 3px;
-  }
-
-  .task-desc {
-    font-size: 11px;
-    color: var(--text);
-    line-height: 1.4;
-    margin-bottom: 6px;
-  }
-
-  .task-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .task-deadline {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-  }
-
-  .task-confirm-btn {
-    padding: 3px 8px;
-    border-radius: 2px;
-    background: var(--green-dim);
-    border: 1px solid rgba(78,202,122,0.3);
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.1s;
-  }
-  .task-confirm-btn:hover { background: var(--green-mid); }
-
-  /* POST MEETING SUMMARY */
-  .summary-card {
-    width: 100%;
-    max-width: 600px;
-    border: 1px solid var(--border-bright);
-    border-radius: 6px;
-    background: var(--glass);
-    animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    overflow: hidden;
-  }
-
-  .summary-header {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .summary-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .summary-sub {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    margin-top: 2px;
-  }
-
-  .summary-body { padding: 16px; }
-
-  .summary-section {
-    margin-bottom: 16px;
-  }
-
-  .summary-section-title {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .action-item {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-  }
-
-  .action-owner-tag {
-    font-family: var(--mono);
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    background: var(--amber-dim);
-    color: var(--amber);
-    white-space: nowrap;
-  }
-
-  .action-text {
-    font-size: 11px;
-    color: var(--text-dim);
-    flex: 1;
-    line-height: 1.5;
-  }
-
-  .action-due {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    white-space: nowrap;
-  }
-
-  /* WAVEFORM VISUALIZER */
-  .waveform {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 24px;
-    padding: 0 4px;
-  }
-
-  .waveform-bar {
-    width: 2px;
-    border-radius: 1px;
-    background: var(--green);
-    opacity: 0.6;
-    animation: wave 1.2s ease-in-out infinite;
-  }
-
-  @keyframes wave {
-    0%, 100% { transform: scaleY(0.3); }
-    50% { transform: scaleY(1); }
-  }
-
-  /* CONNECT SETUP FORM */
-  .setup-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(8px);
-    z-index: 9000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .setup-card {
-    background: var(--surface);
-    border: 1px solid var(--border-bright);
-    border-radius: 8px;
-    width: 480px;
-    overflow: hidden;
-    animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .setup-stripe {
-    height: 3px;
-    background: linear-gradient(90deg, var(--green) 0%, rgba(78,202,122,0.3) 100%);
-  }
-
-  .setup-body { padding: 28px; }
-
-  .setup-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-
-  .setup-sub {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-bottom: 24px;
-    line-height: 1.5;
-  }
-
-  .form-group { margin-bottom: 16px; }
-
-  .form-label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-
-  .form-input {
-    width: 100%;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 9px 12px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .form-input:focus {
-    border-color: var(--green);
-    background: rgba(78,202,122,0.04);
-  }
-
-  .form-input::placeholder { color: var(--text-faint); }
-
-  .attendees-input-row {
-    display: flex;
-    gap: 8px;
-  }
-
-  .attendee-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 8px;
-  }
-
-  .tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: var(--green-dim);
-    border: 1px solid rgba(78,202,122,0.2);
-    font-size: 11px;
-    color: var(--green);
-    cursor: pointer;
-  }
-
-  .tag-chip:hover { background: rgba(224,85,85,0.1); color: var(--red); border-color: rgba(224,85,85,0.2); }
-
-  .setup-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 24px;
-  }
-
-  .btn-setup-primary {
-    flex: 1;
-    padding: 11px 20px;
-    background: var(--green-dim);
-    border: 1px solid rgba(78,202,122,0.4);
-    border-radius: 4px;
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn-setup-primary:hover { background: var(--green-mid); }
-
-  /* LOADING SPINNER */
-  .loading-ring {
-    display: inline-block;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    border: 2px solid rgba(78,202,122,0.2);
-    border-top-color: var(--green);
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* WS STATUS */
-  .ws-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-
-  .ws-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #555;
-  }
-  .ws-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .ws-dot.error { background: var(--red); }
-
-  /* PHASE3 PROGRESS */
-  .progress-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    max-width: 500px;
-    margin-top: 8px;
-  }
-
-  .progress-step {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--glass);
-  }
-
-  .step-icon {
-    font-size: 14px;
-    width: 20px;
-    text-align: center;
-  }
-
-  .step-text {
-    font-size: 12px;
-    color: var(--text-dim);
-    flex: 1;
-  }
-
-  .step-status {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .step-status.done { color: var(--green); }
-  .step-status.active { color: var(--amber); }
-
-  /* Scrollbar styling */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* Timer */
-  .timer {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 0.08em;
-  }
-
-  .timer.active { color: var(--green); }
-
-  /* Silence indicator */
-  .silence-bar {
-    width: 100%;
-    height: 2px;
-    background: var(--border);
-    border-radius: 1px;
-    overflow: hidden;
-    margin-top: 8px;
-  }
-
-  .silence-fill {
-    height: 100%;
-    background: var(--green);
-    border-radius: 1px;
-    width: 0%;
-    transition: width 0.1s linear;
-  }
+:root {
+  --bg: #080c0a;
+  --surface: #0d1510;
+  --glass: rgba(14,22,17,0.95);
+  --border: rgba(74,222,128,0.12);
+  --border-hi: rgba(74,222,128,0.35);
+  --green: #4ade80;
+  --green-dim: rgba(74,222,128,0.1);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,0.1);
+  --red: #f87171;
+  --red-dim: rgba(248,113,113,0.1);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96,165,250,0.1);
+  --text: #d0e8d8;
+  --text-dim: rgba(208,232,216,0.5);
+  --text-faint: rgba(208,232,216,0.22);
+  --mono: 'Space Mono', monospace;
+  --sans: 'Inter', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px}
+
+/* scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9999}
+
+/* ── TOPBAR ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:44px;background:rgba(6,10,8,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;z-index:500;backdrop-filter:blur(10px)}
+.brand{display:flex;align-items:center;gap:8px;margin-right:8px}
+.brand-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.brand-name{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:0.12em}
+.topbar-sep{width:1px;height:20px;background:var(--border)}
+.top-meta{font-family:var(--mono);font-size:9px;color:var(--text-faint);letter-spacing:0.08em;display:flex;align-items:center;gap:5px}
+.top-meta b{color:var(--text-dim)}
+.spacer{flex:1}
+.phase-pill{padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border);color:var(--text-faint);transition:all 0.3s}
+.phase-pill.p1{border-color:rgba(74,222,128,0.3);color:var(--green);background:var(--green-dim)}
+.phase-pill.p2{border-color:rgba(74,222,128,0.4);color:var(--green);background:rgba(74,222,128,0.12);animation:pulse-pill 2s ease-in-out infinite}
+.phase-pill.p3{border-color:rgba(251,191,36,0.35);color:var(--amber);background:var(--amber-dim)}
+@keyframes pulse-pill{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}50%{box-shadow:0 0 0 3px rgba(74,222,128,0.1)}}
+.demo-badge{padding:2px 8px;border-radius:3px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);font-family:var(--mono);font-size:8px;color:var(--amber);letter-spacing:0.1em;display:none}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:260px 1fr 260px;grid-template-rows:calc(100vh - 44px - 180px) 180px;margin-top:44px;height:calc(100vh - 44px)}
+
+/* ── PANELS ── */
+.panel{background:var(--glass);border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-label{font-family:var(--mono);font-size:8px;letter-spacing:0.16em;color:var(--text-faint);text-transform:uppercase}
+.panel-badge{font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:2px;background:var(--green-dim);color:var(--green);border:1px solid rgba(74,222,128,0.18)}
+.panel-badge.amber{background:var(--amber-dim);color:var(--amber);border-color:rgba(251,191,36,0.2)}
+.panel-badge.red{background:var(--red-dim);color:var(--red);border-color:rgba(248,113,113,0.2)}
+.panel-body{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+
+/* left sidebar */
+.left-panel{grid-column:1;grid-row:1/3;border-right:1px solid var(--border)}
+
+/* main zone */
+.main-zone{grid-column:2;grid-row:1;position:relative;display:flex;flex-direction:column;align-items:center;padding:20px;gap:12px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+
+/* transcript */
+.transcript-panel{grid-column:2;grid-row:2;border-top:1px solid var(--border)}
+.t-scroll{flex:1;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:5px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.t-line{display:flex;gap:10px;animation:fadeup 0.2s ease}
+@keyframes fadeup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.t-speaker{font-family:var(--mono);font-size:9px;color:var(--green);white-space:nowrap;min-width:64px;padding-top:1px}
+.t-text{font-size:11px;color:var(--text-dim);line-height:1.5;flex:1}
+.t-time{font-family:var(--mono);font-size:9px;color:var(--text-faint);white-space:nowrap;padding-top:1px}
+.t-line.sys .t-speaker{color:var(--red)}
+
+/* right sidebar */
+.right-panel{grid-column:3;grid-row:1/3;border-left:1px solid var(--border)}
+
+/* ── CONTROLS (bottom of left panel) ── */
+.controls{padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.btn{width:100%;padding:8px 12px;border-radius:4px;border:1px solid;font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-green{background:var(--green-dim);border-color:rgba(74,222,128,0.3);color:var(--green)}
+.btn-green:hover{background:rgba(74,222,128,0.18);border-color:var(--green)}
+.btn-green:disabled{opacity:0.35;cursor:not-allowed}
+.btn-red{background:var(--red-dim);border-color:rgba(248,113,113,0.25);color:var(--red)}
+.btn-red:hover{background:rgba(248,113,113,0.18)}
+.btn-red:disabled{opacity:0.35;cursor:not-allowed}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--text-faint)}
+.btn-ghost:hover{border-color:var(--border-hi);color:var(--text-dim)}
+
+/* ── SESSION INFO ── */
+.meeting-title-text{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
+.meeting-sub{font-family:var(--mono);font-size:9px;color:var(--text-faint);margin-bottom:14px}
+.stat-row{display:flex;justify-content:space-between;padding:4px 0}
+.stat-lbl{font-family:var(--mono);font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em}
+.stat-val{font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+.stat-val.g{color:var(--green)}
+.stat-val.a{color:var(--amber)}
+.divider{border:none;border-top:1px solid var(--border);margin:10px 0}
+.attendee-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid var(--border);font-size:10px;color:var(--text-dim);margin:2px}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1s ease-in-out infinite}
+
+/* ── WAVEFORM ── */
+.waveform{display:flex;align-items:center;gap:2px;height:16px}
+.wbar{width:2px;border-radius:1px;background:var(--green);opacity:0.7;animation:wave 1.1s ease-in-out infinite}
+@keyframes wave{0%,100%{transform:scaleY(0.25)}50%{transform:scaleY(1)}}
+
+/* ── MAIN CARDS ── */
+.card{width:100%;max-width:580px;border-radius:7px;border:1px solid var(--border);overflow:hidden;animation:cardin 0.3s cubic-bezier(0.16,1,0.3,1)}
+@keyframes cardin{from{opacity:0;transform:translateY(-10px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card-stripe{height:2px;width:100%}
+.card-inner{padding:14px 16px}
+.card-tag{font-family:var(--mono);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;opacity:0.7;margin-bottom:4px}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.35}
+.card-body{font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px}
+.card-source{font-family:var(--mono);font-size:9px;color:var(--text-faint);margin-bottom:8px}
+.card-actions{display:flex;gap:6px}
+.card-btn{padding:4px 11px;border-radius:3px;font-family:var(--mono);font-size:9px;letter-spacing:0.07em;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all 0.12s}
+.card-btn-confirm{background:var(--green-dim);border-color:rgba(74,222,128,0.3);color:var(--green)}
+.card-btn-confirm:hover{background:rgba(74,222,128,0.2)}
+.card-btn-dismiss{background:transparent;border-color:var(--border);color:var(--text-faint)}
+.card-btn-dismiss:hover{border-color:var(--border-hi);color:var(--text-dim)}
+.urgency{display:inline-flex;padding:1px 6px;border-radius:2px;font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:0.08em;margin-left:6px;vertical-align:middle}
+.urgency.high{background:rgba(248,113,113,0.15);color:var(--red)}
+.urgency.medium{background:rgba(251,191,36,0.12);color:var(--amber)}
+.urgency.low{background:var(--green-dim);color:var(--green);opacity:0.6}
+
+/* briefing specific */
+.briefing-card{background:rgba(74,222,128,0.04);border-color:rgba(74,222,128,0.2)}
+.briefing-spoken{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:12px;padding:10px 12px;background:rgba(74,222,128,0.05);border-radius:4px;border-left:2px solid var(--green)}
+.briefing-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.briefing-section{padding:8px 10px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02)}
+.briefing-sec-label{font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px}
+.briefing-item{font-size:10px;color:var(--text-dim);padding:2px 0;line-height:1.5;display:flex;gap:5px}
+.briefing-item.warn{color:var(--amber)}
+
+/* standby */
+.standby{text-align:center;padding:40px 20px;opacity:0.3}
+.standby-icon{font-size:28px;margin-bottom:10px;opacity:0.5}
+.standby-text{font-family:var(--mono);font-size:9px;letter-spacing:0.14em;color:var(--text-dim);text-transform:uppercase}
+
+/* loader */
+.loader{display:inline-block;width:20px;height:20px;border-radius:50%;border:2px solid rgba(74,222,128,0.2);border-top-color:var(--green);animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 20px}
+.loading-state span{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:0.14em;text-transform:uppercase}
+
+/* summary */
+.summary-card{background:rgba(74,222,128,0.03);border-color:rgba(74,222,128,0.25)}
+.summary-heading{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.summary-sub{font-family:var(--mono);font-size:9px;color:var(--text-faint);margin-bottom:12px}
+.section-title{font-family:var(--mono);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.action-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);align-items:flex-start}
+.action-owner{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:2px;background:var(--amber-dim);color:var(--amber);white-space:nowrap}
+.action-text{font-size:11px;color:var(--text-dim);flex:1;line-height:1.45}
+.action-due{font-family:var(--mono);font-size:9px;color:var(--text-faint);white-space:nowrap}
+
+/* tasks */
+.task-item{padding:9px 11px;border-radius:4px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-left:3px solid var(--amber);margin-bottom:7px}
+.task-item.done{border-left-color:var(--green);opacity:0.55}
+.task-owner{font-family:var(--mono);font-size:8px;color:var(--amber);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px}
+.task-desc{font-size:11px;color:var(--text);line-height:1.4;margin-bottom:5px}
+.task-meta{display:flex;align-items:center;justify-content:space-between}
+.task-due{font-family:var(--mono);font-size:9px;color:var(--text-faint)}
+.task-done-btn{padding:2px 8px;border-radius:2px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.25);color:var(--green);font-family:var(--mono);font-size:8px;letter-spacing:0.06em;cursor:pointer}
+
+/* phase3 progress */
+.p3-step{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);margin-bottom:7px}
+.p3-step-text{font-size:11px;color:var(--text-dim);flex:1}
+.p3-step-status{font-family:var(--mono);font-size:8px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em}
+.p3-step-status.running{color:var(--amber)}
+.p3-step-status.done{color:var(--green)}
+
+/* setup modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);z-index:8000;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border-hi);border-radius:8px;width:460px;overflow:hidden;animation:cardin 0.3s cubic-bezier(0.16,1,0.3,1)}
+.modal-stripe{height:3px;background:linear-gradient(90deg,var(--green),rgba(74,222,128,0.2))}
+.modal-body{padding:26px}
+.modal-title{font-size:17px;font-weight:600;color:var(--text);margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--text-dim);margin-bottom:22px;line-height:1.55}
+.form-label{display:block;font-family:var(--mono);font-size:8px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px}
+.form-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:9px 11px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;transition:border-color 0.15s;margin-bottom:14px}
+.form-input:focus{border-color:var(--green);background:rgba(74,222,128,0.04)}
+.form-input::placeholder{color:var(--text-faint)}
+.form-row{display:flex;gap:8px}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn-primary-lg{flex:1;padding:11px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.35);border-radius:4px;color:var(--green);font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+.btn-primary-lg:hover{background:rgba(74,222,128,0.18);border-color:var(--green)}
+.btn-secondary-lg{padding:11px 20px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-faint);font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+.btn-secondary-lg:hover{border-color:var(--border-hi);color:var(--text-dim)}
+
+/* ws dot */
+.ws-dot{width:6px;height:6px;border-radius:50%;background:#333;transition:background 0.3s}
+.ws-dot.live{background:var(--green);box-shadow:0 0 5px var(--green)}
+.ws-dot.err{background:var(--red)}
+
+/* timer */
+.timer{font-family:var(--mono);font-size:10px;color:var(--text-faint);letter-spacing:0.06em}
+.timer.live{color:var(--green)}
+
+/* empty */
+.empty{padding:28px 16px;text-align:center;opacity:0.28}
+.empty-lbl{font-family:var(--mono);font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em}
 </style>
 </head>
 <body>
 
-<!-- Corner brackets -->
-<div class="corner tl"></div>
-<div class="corner tr"></div>
-<div class="corner bl"></div>
-<div class="corner br"></div>
-
 <!-- SETUP MODAL -->
-<div class="setup-overlay" id="setupOverlay">
-  <div class="setup-card">
-    <div class="setup-stripe"></div>
-    <div class="setup-body">
-      <div class="setup-title">Initialize Session</div>
-      <div class="setup-sub">Connect to your meeting. MeetingMind will prepare your briefing and stand by invisibly.</div>
-
-      <div class="form-group">
-        <label class="form-label">Meeting Title</label>
-        <input class="form-input" id="meetingTitle" type="text" placeholder="e.g. Q2 Budget Review" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Agenda</label>
-        <input class="form-input" id="meetingAgenda" type="text" placeholder="e.g. Review Q2 financials, approve headcount plan" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Attendees</label>
-        <div class="attendees-input-row">
-          <input class="form-input" id="attendeeInput" type="text" placeholder="Add name and press Enter" style="flex:1" />
-        </div>
-        <div class="attendee-tags" id="attendeeTags"></div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Server URL</label>
-        <input class="form-input" id="serverUrl" type="text" value="wss://meetingmind-live-743060312558.us-central1.run.app/ws/" />
-      </div>
-
-      <div class="setup-actions">
-        <button class="btn-setup-primary" onclick="startSession()">
-          ▶ &nbsp;Start MeetingMind
-        </button>
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-body">
+      <div class="modal-title">Initialize MeetingMind</div>
+      <div class="modal-sub">Open your Google Meet in another tab, then fill this in. MeetingMind will watch silently and assist in real time.</div>
+      <label class="form-label">Meeting title</label>
+      <input class="form-input" id="inTitle" placeholder="e.g. Q2 Budget Review" />
+      <label class="form-label">Agenda (optional)</label>
+      <input class="form-input" id="inAgenda" placeholder="e.g. Review Q2 numbers, approve headcount" />
+      <label class="form-label">Attendees (comma separated)</label>
+      <input class="form-input" id="inAttendees" placeholder="Alice, Bob, Carol" />
+      <label class="form-label">Backend URL</label>
+      <input class="form-input" id="inUrl" value="wss://meetingmind-live-743060312558.us-central1.run.app/ws/" />
+      <div class="modal-actions">
+        <button class="btn-secondary-lg" onclick="startDemo()">▷ Demo Mode</button>
+        <button class="btn-primary-lg" onclick="startSession()">▶ Start Session</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- TOP BAR -->
+<!-- TOPBAR -->
 <div class="topbar">
   <div class="brand">
     <div class="brand-dot"></div>
     <span class="brand-name">MeetingMind Live</span>
   </div>
-  <div class="topbar-meta">
-    <div class="meta-item">Phase: <span id="phaseLabel">—</span></div>
-    <div class="meta-item">Session: <span id="sessionId">—</span></div>
-    <div class="meta-item">
-      <div class="waveform" id="waveform" style="display:none">
-        <div class="waveform-bar" style="height:14px;animation-delay:0s"></div>
-        <div class="waveform-bar" style="height:20px;animation-delay:0.1s"></div>
-        <div class="waveform-bar" style="height:10px;animation-delay:0.2s"></div>
-        <div class="waveform-bar" style="height:18px;animation-delay:0.05s"></div>
-        <div class="waveform-bar" style="height:12px;animation-delay:0.15s"></div>
-        <div class="waveform-bar" style="height:22px;animation-delay:0.25s"></div>
-      </div>
-      <span class="timer" id="timer">00:00</span>
-    </div>
-    <div class="ws-status">
-      <div class="ws-dot" id="wsDot"></div>
-      <span id="wsStatusText">offline</span>
+  <div class="topbar-sep"></div>
+  <div class="top-meta">Phase: <b id="topPhase">—</b></div>
+  <div class="top-meta">Session: <b id="topSession">—</b></div>
+  <div class="top-meta" id="waveWrap" style="display:none">
+    <div class="waveform">
+      <div class="wbar" style="animation-delay:0s;height:14px"></div>
+      <div class="wbar" style="animation-delay:0.1s;height:20px"></div>
+      <div class="wbar" style="animation-delay:0.2s;height:10px"></div>
+      <div class="wbar" style="animation-delay:0.05s;height:18px"></div>
+      <div class="wbar" style="animation-delay:0.15s;height:22px"></div>
+      <div class="wbar" style="animation-delay:0.25s;height:12px"></div>
     </div>
   </div>
-  <div class="topbar-actions">
-    <button class="btn btn-ghost" style="width:auto;padding:5px 12px" onclick="showSetup()">New Session</button>
-    <button class="btn btn-danger" style="width:auto;padding:5px 12px" id="endBtn" onclick="endMeeting()" disabled>■ End Meeting</button>
-  </div>
+  <div class="top-meta"><div class="ws-dot" id="wsDot"></div>&nbsp;<span id="wsLbl">offline</span></div>
+  <div class="spacer"></div>
+  <div class="demo-badge" id="demoBadge">DEMO MODE</div>
+  <span class="phase-pill" id="phasePill">Idle</span>
+  <span class="timer" id="timer">00:00</span>
 </div>
 
-<!-- MAIN LAYOUT -->
-<div class="layout" style="margin-top:48px; height: calc(100vh - 48px);">
+<!-- LAYOUT -->
+<div class="layout">
 
-  <!-- LEFT SIDEBAR -->
-  <div class="sidebar-left panel">
-    <div class="panel-header">
-      <span class="panel-title">Session</span>
+  <!-- LEFT: session info -->
+  <div class="panel left-panel">
+    <div class="panel-head">
+      <span class="panel-label">Session</span>
       <span class="panel-badge" id="sessionBadge">Idle</span>
     </div>
-    <div class="panel-body">
-      <div id="meetingInfo">
-        <div style="text-align:center;padding:30px 0;opacity:0.3">
-          <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">No active session</div>
-        </div>
-      </div>
+    <div class="panel-body" id="sessionBody">
+      <div class="empty"><div class="empty-lbl">No active session</div></div>
     </div>
     <div class="controls">
-      <button class="btn btn-ghost" id="screenShareBtn" onclick="toggleScreenCapture()" disabled>⬜ Screen Analysis: Off</button>
-      <button class="btn btn-primary" id="audioBtn" onclick="toggleAudio()" disabled>🎤 Enable Audio</button>
+      <button class="btn btn-green" id="audioBtn" onclick="toggleAudio()" disabled>🎤 Enable Audio</button>
+      <button class="btn btn-ghost" id="screenBtn" onclick="toggleScreen()" disabled>⬜ Screen Analysis Off</button>
+      <button class="btn btn-red" id="endBtn" onclick="endMeeting()" disabled>■ End Meeting</button>
     </div>
   </div>
 
-  <!-- MAIN CENTER -->
+  <!-- CENTER: main insights zone -->
   <div class="main-zone" id="mainZone">
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">◈</div>
-      <div class="empty-text">Standing by<br>Start a session to activate</div>
+    <div class="standby">
+      <div class="standby-icon">◈</div>
+      <div class="standby-text">Standing by<br>Start a session to activate</div>
     </div>
   </div>
 
-  <!-- RIGHT SIDEBAR — TASKS -->
-  <div class="sidebar-right panel">
-    <div class="panel-header">
-      <span class="panel-title">Task Queue</span>
-      <span class="panel-badge amber" id="taskBadge">0 pending</span>
+  <!-- RIGHT: task queue -->
+  <div class="panel right-panel">
+    <div class="panel-head">
+      <span class="panel-label">Task Queue</span>
+      <span class="panel-badge amber" id="taskBadge">0 tasks</span>
     </div>
-    <div class="panel-body" id="taskList">
-      <div style="text-align:center;padding:30px 0;opacity:0.3">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">No tasks logged</div>
-      </div>
+    <div class="panel-body" id="taskBody">
+      <div class="empty"><div class="empty-lbl">No tasks yet</div></div>
     </div>
   </div>
 
   <!-- TRANSCRIPT -->
-  <div class="transcript-panel panel">
-    <div class="panel-header">
-      <span class="panel-title">Live Transcript</span>
-      <span class="panel-badge" id="transcriptBadge">0 lines</span>
+  <div class="panel transcript-panel">
+    <div class="panel-head">
+      <span class="panel-label">Live Transcript</span>
+      <span class="panel-badge" id="tBadge">0 lines</span>
     </div>
-    <div class="transcript-scroll" id="transcriptFeed">
-      <div style="text-align:center;padding:20px;opacity:0.3;font-family:var(--mono);font-size:10px;color:var(--text-dim);">
-        Transcript will appear here
-      </div>
+    <div class="t-scroll" id="tFeed">
+      <div class="empty"><div class="empty-lbl">Transcript will appear here</div></div>
     </div>
   </div>
+
 </div>
 
 <script>
-// ========================
-// STATE
-// ========================
+// ─── STATE ────────────────────────────────────────────────────────────────
 let ws = null;
 let sessionId = null;
-let meetingPhase = 'idle';
 let attendees = [];
 let tasks = [];
-let transcriptLines = [];
-let alerts = [];
-let timerInterval = null;
-let timerSeconds = 0;
+let tLines = 0;
+let alertCount = 0;
+let phase = 'idle';
+let isDemo = false;
+let timerSec = 0;
+let timerInt = null;
 let audioStream = null;
-let audioContext = null;
-let isAudioActive = false;
-let isScreenActive = false;
-let silenceTimer = 0;
-let screenCaptureStream = null;
+let audioCtx = null;
+let mediaRec = null;
+let screenStream = null;
+let isAudio = false;
+let isScreen = false;
 
-// ========================
-// SETUP
-// ========================
-function showSetup() {
-  document.getElementById('setupOverlay').style.display = 'flex';
-}
-
-document.getElementById('attendeeInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const val = e.target.value.trim();
-    if (val && !attendees.includes(val)) {
-      attendees.push(val);
-      renderAttendeeTags();
-      e.target.value = '';
-    }
-  }
-});
-
-function renderAttendeeTags() {
-  const container = document.getElementById('attendeeTags');
-  container.innerHTML = attendees.map((a, i) =>
-    `<div class="tag-chip" onclick="removeAttendee(${i})">
-      ${a} <span style="opacity:0.5">×</span>
-    </div>`
-  ).join('');
-}
-
-function removeAttendee(i) {
-  attendees.splice(i, 1);
-  renderAttendeeTags();
-}
-
+// ─── MODAL ────────────────────────────────────────────────────────────────
 function startSession() {
-  const title = document.getElementById('meetingTitle').value.trim() || 'Meeting';
-  const agenda = document.getElementById('meetingAgenda').value.trim();
-  const serverBase = document.getElementById('serverUrl').value.trim();
+  const title = document.getElementById('inTitle').value.trim() || 'Meeting';
+  const agenda = document.getElementById('inAgenda').value.trim();
+  const att = document.getElementById('inAttendees').value.trim();
+  const url = document.getElementById('inUrl').value.trim();
 
+  attendees = att ? att.split(',').map(s => s.trim()).filter(Boolean) : [];
   sessionId = 'sess_' + Date.now().toString(36);
-  document.getElementById('sessionId').textContent = sessionId.slice(-8);
-  document.getElementById('setupOverlay').style.display = 'none';
+  document.getElementById('topSession').textContent = sessionId.slice(-7);
+  document.getElementById('modalBg').style.display = 'none';
 
-  connectWebSocket(serverBase + sessionId, { title, agenda, attendees: [...attendees] });
+  connectWS(url + sessionId, { title, agenda, attendees });
 }
 
-// ========================
-// WEBSOCKET
-// ========================
-function connectWebSocket(url, meetingInfo) {
-  setWsStatus('connecting');
+function startDemo() {
+  isDemo = true;
+  document.getElementById('demoBadge').style.display = 'block';
+  const title = document.getElementById('inTitle').value.trim() || 'Q2 Strategy Review';
+  const att = document.getElementById('inAttendees').value.trim();
+  attendees = att ? att.split(',').map(s => s.trim()).filter(Boolean) : ['Alice','Bob','Carol'];
+  sessionId = 'demo_' + Date.now().toString(36);
+  document.getElementById('topSession').textContent = sessionId.slice(-7);
+  document.getElementById('modalBg').style.display = 'none';
+  setWS('live');
+  document.getElementById('endBtn').disabled = false;
+  document.getElementById('audioBtn').disabled = false;
+  startTimer();
+  runDemo(title);
+}
 
+// ─── WEBSOCKET ────────────────────────────────────────────────────────────
+function connectWS(url, info) {
+  setWS('connecting');
   try {
     ws = new WebSocket(url);
-
     ws.onopen = () => {
-      setWsStatus('connected');
-      ws.send(JSON.stringify({ type: 'meeting_start', meeting_info: meetingInfo }));
+      setWS('live');
+      ws.send(JSON.stringify({ type: 'meeting_start', meeting_info: info }));
       document.getElementById('endBtn').disabled = false;
       document.getElementById('audioBtn').disabled = false;
-      document.getElementById('screenShareBtn').disabled = false;
+      document.getElementById('screenBtn').disabled = false;
       startTimer();
     };
-
-    ws.onmessage = e => {
-      try {
-        const msg = JSON.parse(e.data);
-        handleMessage(msg);
-      } catch (err) { console.error('Parse error', err); }
-    };
-
-    ws.onclose = () => {
-      setWsStatus('offline');
-      stopTimer();
-      document.getElementById('endBtn').disabled = true;
-    };
-
-    ws.onerror = () => setWsStatus('error');
-
-  } catch (err) {
-    setWsStatus('error');
-    // Demo mode
-    simulateDemoMode(meetingInfo);
-  }
+    ws.onmessage = e => { try { handleMsg(JSON.parse(e.data)); } catch(err){} };
+    ws.onclose = () => { setWS('offline'); stopTimer(); };
+    ws.onerror = () => { setWS('err'); startDemo(); }; // auto-fallback to demo
+  } catch(e) { startDemo(); }
 }
 
-function setWsStatus(status) {
+function setWS(s) {
   const dot = document.getElementById('wsDot');
-  const txt = document.getElementById('wsStatusText');
-  dot.className = 'ws-dot';
-  if (status === 'connected') { dot.classList.add('connected'); txt.textContent = 'live'; }
-  else if (status === 'error') { dot.classList.add('error'); txt.textContent = 'error'; }
-  else if (status === 'connecting') { txt.textContent = 'connecting...'; }
-  else { txt.textContent = 'offline'; }
+  const lbl = document.getElementById('wsLbl');
+  dot.className = 'ws-dot' + (s === 'live' ? ' live' : s === 'err' ? ' err' : '');
+  lbl.textContent = s;
 }
 
-// ========================
-// MESSAGE HANDLER
-// ========================
-function handleMessage(msg) {
-  switch (msg.type) {
-    case 'phase1_starting':
-      setPhase('pre_meeting');
-      showPhase1Loading();
-      break;
-    case 'phase1_complete':
-      setPhase('active');
-      showBriefing(msg.briefing);
-      renderSessionInfo(msg.briefing);
-      break;
-    case 'overlay_alert':
-      showAlert(msg.alert);
-      break;
-    case 'task_logged':
-      addTask(msg.task);
-      break;
-    case 'screen_analyzed':
-      // Screen context updated silently
-      break;
-    case 'phase3_starting':
-      setPhase('post_meeting');
-      showPhase3Progress(msg);
-      break;
-    case 'phase3_complete':
-      showSummary(msg.result);
-      break;
-    case 'error':
-      addTranscriptLine('SYSTEM', `Error: ${msg.message}`, true);
-      break;
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+// ─── MESSAGE HANDLER ──────────────────────────────────────────────────────
+function handleMsg(msg) {
+  switch(msg.type) {
+    case 'phase1_starting': setPhase('p1'); showLoading('Preparing your briefing...', 'Reading docs from Cloud Storage'); break;
+    case 'phase1_complete': setPhase('p2'); showBriefing(msg.briefing); renderSessionInfo(msg.briefing); break;
+    case 'overlay_alert': showAlert(msg.alert); break;
+    case 'task_logged': addTask(msg.task); break;
+    case 'screen_analyzed': break;
+    case 'phase3_starting': setPhase('p3'); showP3Progress(); break;
+    case 'phase3_complete': showSummary(msg.result); break;
+    case 'error': addT('SYSTEM', msg.message || 'Error', true); break;
   }
 }
 
-// ========================
-// PHASE RENDERING
-// ========================
-function setPhase(phase) {
-  meetingPhase = phase;
-  const labels = {
-    idle: '—',
-    pre_meeting: 'Phase 1 — Briefing',
-    active: 'Phase 2 — Battlefield',
-    post_meeting: 'Phase 3 — Executing',
-    completed: 'Completed'
-  };
-  document.getElementById('phaseLabel').textContent = labels[phase] || phase;
-
+// ─── PHASE ────────────────────────────────────────────────────────────────
+function setPhase(p) {
+  phase = p;
+  const pill = document.getElementById('phasePill');
+  const top = document.getElementById('topPhase');
   const badge = document.getElementById('sessionBadge');
-  const colors = {
-    pre_meeting: 'green',
-    active: 'green',
-    post_meeting: 'amber',
-  };
-  badge.textContent = phase.replace('_', ' ');
+  const map = { idle:'Idle', p1:'Phase 1 · Briefing', p2:'Phase 2 · Battlefield', p3:'Phase 3 · Executing', done:'Complete' };
+  pill.className = 'phase-pill ' + (p !== 'idle' && p !== 'done' ? p : '');
+  pill.textContent = map[p] || p;
+  top.textContent = map[p] || p;
+  badge.textContent = map[p] || 'Idle';
 }
 
-function showPhase1Loading() {
-  const zone = document.getElementById('mainZone');
-  zone.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:60px">
-      <div class="loading-ring" style="width:28px;height:28px;border-width:3px"></div>
-      <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--green);text-transform:uppercase">
-        Preparing briefing...
-      </div>
-      <div style="font-size:12px;color:var(--text-faint);max-width:300px;text-align:center;line-height:1.6">
-        Reading meeting documents and past notes from Cloud Storage
-      </div>
-    </div>
-  `;
+// ─── MAIN ZONE RENDERS ────────────────────────────────────────────────────
+function clearZone() { document.getElementById('mainZone').innerHTML = ''; }
+
+function showLoading(title, sub) {
+  clearZone();
+  const z = document.getElementById('mainZone');
+  z.innerHTML = `<div class="loading-state"><div class="loader"></div><span>${title}</span><div style="font-size:11px;color:var(--text-faint);text-align:center;max-width:280px;line-height:1.6">${sub}</div></div>`;
 }
 
-function showBriefing(briefing) {
-  if (!briefing) return;
-  const zone = document.getElementById('mainZone');
-
-  const contextItems = (briefing.key_context || []).map(c =>
-    `<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-dim);display:flex;gap:8px;align-items:flex-start">
-      <span style="color:var(--green);margin-top:1px">▸</span> ${c}
-    </div>`
-  ).join('');
-
-  const watchItems = (briefing.watch_out_for || []).map(w =>
-    `<div style="padding:5px 0;font-size:11px;color:var(--amber);display:flex;gap:8px;align-items:flex-start">
-      <span style="margin-top:1px">⚑</span> ${w}
-    </div>`
-  ).join('');
-
-  zone.innerHTML = `
-    <div style="width:100%;max-width:600px;animation:slide-in 0.35s cubic-bezier(0.16,1,0.3,1)">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;color:var(--green);text-transform:uppercase;opacity:0.7">Phase 1 Complete</div>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-      </div>
-
-      <div class="briefing-box" style="margin-bottom:16px">
-        <div class="briefing-label">🔊 Voice Briefing</div>
-        <div class="briefing-text">${briefing.spoken_brief || 'Your meeting is about to begin.'}</div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="background:var(--glass);border:1px solid var(--border);border-radius:4px;padding:12px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px">Key Context</div>
-          ${contextItems || '<div style="font-size:11px;color:var(--text-faint)">None loaded</div>'}
-        </div>
-        <div style="background:var(--glass);border:1px solid rgba(240,160,58,0.15);border-radius:4px;padding:12px">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--amber);opacity:0.6;text-transform:uppercase;margin-bottom:8px">Watch Out For</div>
-          ${watchItems || '<div style="font-size:11px;color:var(--text-faint)">Nothing flagged</div>'}
-        </div>
-      </div>
-
-      <div style="margin-top:16px;padding:10px 14px;background:var(--green-dim);border:1px solid rgba(78,202,122,0.2);border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--green);text-align:center">
-        ◈ &nbsp; Battlefield Mode Active — Watching silently
-      </div>
-    </div>
-  `;
-
-  // Auto-dismiss briefing after 8s to show empty battlefield state
-  setTimeout(() => {
-    if (meetingPhase === 'active') showBattlefieldStandby();
-  }, 8000);
-}
-
-function showBattlefieldStandby() {
-  const zone = document.getElementById('mainZone');
-  const existing = zone.querySelectorAll('.alert-card');
-  if (existing.length > 0) return; // Don't clear if alerts showing
-
-  // Keep only a subtle indicator
-  const standby = document.createElement('div');
-  standby.id = 'standbyIndicator';
-  standby.style.cssText = 'position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;letter-spacing:0.14em;color:var(--text-faint);text-transform:uppercase;opacity:0.4';
-  standby.textContent = '◈ watching';
-  zone.innerHTML = '';
-  zone.appendChild(standby);
-}
-
-function renderSessionInfo(briefing) {
-  const info = document.getElementById('meetingInfo');
-  const title = document.getElementById('meetingTitle')?.value || 'Meeting';
-  const attendeeChips = attendees.map((a, i) =>
-    `<div class="attendee-chip">
-      ${i === 0 ? '<div class="speaking"></div>' : ''}
-      ${a}
-    </div>`
-  ).join('');
-
-  info.innerHTML = `
-    <div class="meeting-title">${title}</div>
-    <div class="meeting-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} — Active</div>
-    <div class="phase-indicator">
-      <div class="phase-dot"></div>
-      <span class="phase-label">Battlefield Mode</span>
-    </div>
-    <div class="attendees-label">Attendees</div>
-    <div>${attendeeChips || '<div style="font-size:11px;color:var(--text-faint)">No attendees</div>'}</div>
-    <hr class="divider">
-    <div class="stat-row"><span class="stat-label">Alerts fired</span><span class="stat-value green" id="alertCount">0</span></div>
-    <div class="stat-row"><span class="stat-label">Tasks logged</span><span class="stat-value amber" id="taskCount">0</span></div>
-    <div class="stat-row"><span class="stat-label">Duration</span><span class="stat-value" id="durationStat">00:00</span></div>
-    ${briefing?.relevant_doc ? `
-      <hr class="divider">
-      <div class="briefing-label">Relevant Doc</div>
-      <div style="font-size:11px;color:var(--text-dim);padding:6px 8px;background:var(--green-dim);border-radius:3px;border:1px solid rgba(78,202,122,0.15)">
-        📄 ${briefing.relevant_doc}
-      </div>` : ''}
-  `;
-}
-
-// ========================
-// ALERTS
-// ========================
-const ALERT_CONFIG = {
-  fact_shield: { class: 'fact-shield', icon: '⚠', layer: 'Fact Shield' },
-  question_anticipator: { class: 'question', icon: '◎', layer: 'Question Anticipator' },
-  negotiation: { class: 'negotiation', icon: '⊕', layer: 'Negotiation Assistant' },
-  task_logger: { class: 'task', icon: '✦', layer: 'Task Logger' }
-};
-
-function showAlert(alert) {
-  if (!alert?.show_overlay) return;
-
-  const zone = document.getElementById('mainZone');
-  const standby = document.getElementById('standbyIndicator');
-  if (standby) standby.remove();
-
-  const cfg = ALERT_CONFIG[alert.layer] || ALERT_CONFIG['fact_shield'];
-  const urgency = alert.urgency || 'medium';
+function showBriefing(b) {
+  if (!b) return;
+  clearZone();
+  const z = document.getElementById('mainZone');
+  const ctx = (b.key_context||[]).map(c=>`<div class="briefing-item"><span style="color:var(--green);font-size:9px">▸</span>${c}</div>`).join('');
+  const watch = (b.watch_out_for||[]).map(w=>`<div class="briefing-item warn"><span style="font-size:9px">⚑</span>${w}</div>`).join('');
+  const attendeeNotes = (b.attendee_notes||[]).map(a=>`<div class="briefing-item"><span style="color:var(--blue);min-width:60px;font-family:var(--mono);font-size:9px">${a.name}</span><span style="color:var(--text-faint)">${a.note}</span></div>`).join('');
 
   const card = document.createElement('div');
-  card.className = `alert-card ${cfg.class}`;
-  card.style.width = '100%';
-  card.style.maxWidth = '600px';
+  card.className = 'card briefing-card';
+  card.style.maxWidth = '580px';
+  card.innerHTML = `
+    <div class="card-stripe" style="background:var(--green)"></div>
+    <div class="card-inner">
+      <div class="card-tag" style="color:var(--green)">Phase 1 Complete — Pre-Meeting Briefing</div>
+      <div class="briefing-spoken">${b.spoken_brief||'Your meeting is about to begin.'}</div>
+      <div class="briefing-grid">
+        <div class="briefing-section">
+          <div class="briefing-sec-label">Key Context</div>
+          ${ctx||'<div class="briefing-item" style="color:var(--text-faint)">None loaded</div>'}
+        </div>
+        <div class="briefing-section" style="border-color:rgba(251,191,36,0.15)">
+          <div class="briefing-sec-label" style="color:var(--amber)">Watch Out For</div>
+          ${watch||'<div class="briefing-item" style="color:var(--text-faint)">Nothing flagged</div>'}
+        </div>
+        ${attendeeNotes ? `<div class="briefing-section" style="grid-column:1/-1;border-color:rgba(96,165,250,0.15)"><div class="briefing-sec-label" style="color:var(--blue)">Attendee Notes</div>${attendeeNotes}</div>` : ''}
+      </div>
+      ${b.relevant_doc ? `<div style="margin-top:8px;padding:7px 10px;background:rgba(74,222,128,0.05);border-radius:3px;border:1px solid rgba(74,222,128,0.15);font-size:10px;color:var(--text-dim)">📄 Relevant doc: ${b.relevant_doc}</div>` : ''}
+      <div class="card-actions" style="margin-top:12px">
+        <button class="card-btn card-btn-confirm" onclick="dismissCard(this)">Got it — start battlefield ✓</button>
+      </div>
+    </div>`;
+  z.appendChild(card);
+
+  setTimeout(() => { if (phase === 'p2' && z.querySelectorAll('.card').length === 0) showStandby(); }, 10000);
+}
+
+function showStandby() {
+  const z = document.getElementById('mainZone');
+  if (z.querySelectorAll('.card').length > 0) return;
+  z.innerHTML = `<div class="standby"><div class="standby-icon">◈</div><div class="standby-text">Watching silently<br>Alerts will appear here</div></div>`;
+}
+
+function showAlert(a) {
+  if (!a?.show_overlay) return;
+  const colors = { fact_shield: 'var(--red)', question_anticipator: 'var(--blue)', negotiation: 'var(--amber)', task_logger: 'var(--green)', error: 'var(--red)' };
+  const labels = { fact_shield:'Fact Shield', question_anticipator:'Question Anticipator', negotiation:'Negotiation Assistant', task_logger:'Task Assigned', error:'Error' };
+  const color = colors[a.layer] || 'var(--green)';
+  const label = labels[a.layer] || a.layer;
+  const urgency = a.urgency || 'medium';
+
+  const z = document.getElementById('mainZone');
+  const standby = z.querySelector('.standby');
+  if (standby) standby.remove();
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.borderColor = color.replace('var(--','').replace(')','') === color ? color : `rgba(${color === 'var(--red)' ? '248,113,113' : color === 'var(--blue)' ? '96,165,250' : color === 'var(--amber)' ? '251,191,36' : '74,222,128'},0.3)`;
+  card.style.background = `rgba(${color === 'var(--red)' ? '248,113,113' : color === 'var(--blue)' ? '96,165,250' : color === 'var(--amber)' ? '251,191,36' : '74,222,128'},0.04)`;
 
   card.innerHTML = `
-    <div class="alert-stripe"></div>
-    <div class="alert-inner">
-      <div class="alert-icon">${cfg.icon}</div>
-      <div class="alert-content">
-        <div class="alert-layer-tag">${cfg.layer}</div>
-        <div class="alert-title">
-          ${alert.title || 'Alert'}
-          <span class="urgency-tag ${urgency}">${urgency}</span>
-        </div>
-        <div class="alert-body">${alert.message || ''}</div>
-        ${alert.source ? `<div class="alert-source">📎 Source: ${alert.source}</div>` : ''}
-        <div class="alert-actions">
-          ${alert.layer === 'task_logger' ?
-            `<button class="alert-btn confirm" onclick="confirmTask(this, ${JSON.stringify(alert.task || {}).replace(/"/g, '&quot;')})">✓ Confirm Task</button>` :
-            ''}
-          <button class="alert-btn dismiss" onclick="dismissAlert(this)">Dismiss</button>
-        </div>
+    <div class="card-stripe" style="background:${color}"></div>
+    <div class="card-inner">
+      <div class="card-tag" style="color:${color}">${label}</div>
+      <div class="card-title">${a.title||'Alert'} <span class="urgency ${urgency}">${urgency}</span></div>
+      <div class="card-body">${a.message||''}</div>
+      ${a.source ? `<div class="card-source">📎 ${a.source}</div>` : ''}
+      <div class="card-actions">
+        ${a.layer === 'task_logger' && a.task ? `<button class="card-btn card-btn-confirm" onclick="confirmTask(this,'${encodeURIComponent(JSON.stringify(a.task))}')">✓ Confirm Task</button>` : ''}
+        <button class="card-btn card-btn-dismiss" onclick="dismissCard(this)">Dismiss</button>
       </div>
-    </div>
-    <button class="alert-dismiss" onclick="dismissAlert(this)">×</button>
-  `;
+    </div>`;
 
-  zone.insertBefore(card, zone.firstChild);
+  z.insertBefore(card, z.firstChild);
+  alertCount++;
+  document.getElementById('sessionBody').querySelector('#alertStat') && (document.getElementById('alertStat').textContent = alertCount);
 
-  // Update counter
-  const count = parseInt(document.getElementById('alertCount')?.textContent || '0');
-  if (document.getElementById('alertCount'))
-    document.getElementById('alertCount').textContent = count + 1;
+  // keep max 3 cards
+  const cards = z.querySelectorAll('.card');
+  if (cards.length > 3) cards[cards.length-1].remove();
 
-  // Auto-dismiss non-critical alerts after 12s
-  if (urgency !== 'high') {
-    setTimeout(() => { if (card.parentNode) dismissAlertEl(card); }, 12000);
-  }
+  if (urgency !== 'high') setTimeout(() => { if (card.parentNode) dismissCardEl(card); }, 13000);
 }
 
-function dismissAlert(btn) {
-  const card = btn.closest('.alert-card');
-  dismissAlertEl(card);
+function showP3Progress() {
+  clearZone();
+  const z = document.getElementById('mainZone');
+  z.innerHTML = `
+    <div style="width:100%;max-width:480px;margin-top:16px;animation:cardin 0.3s cubic-bezier(0.16,1,0.3,1)">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;color:var(--amber);text-transform:uppercase;margin-bottom:14px">Phase 3 — Post-Meeting Executor</div>
+      <div class="p3-step"><div class="loader" style="width:12px;height:12px;border-width:1.5px"></div><div class="p3-step-text">Generating meeting summary</div><div class="p3-step-status running">Running</div></div>
+      <div class="p3-step"><div style="width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border)"></div><div class="p3-step-text">Extracting action items with owners</div><div class="p3-step-status">Queued</div></div>
+      <div class="p3-step"><div style="width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border)"></div><div class="p3-step-text">Drafting follow-up emails per attendee</div><div class="p3-step-status">Queued</div></div>
+      <div class="p3-step"><div style="width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border)"></div><div class="p3-step-text">Saving everything to Cloud Storage</div><div class="p3-step-status">Queued</div></div>
+    </div>`;
 }
 
-function dismissAlertEl(card) {
+function showSummary(r) {
+  if (!r) return;
+  setPhase('done');
+  clearZone();
+  const z = document.getElementById('mainZone');
+  const items = (r.action_items||[]).map(i=>`
+    <div class="action-item">
+      <span class="action-owner">${i.owner||'?'}</span>
+      <span class="action-text">${i.description||''}</span>
+      <span class="action-due">${i.deadline||''}</span>
+    </div>`).join('');
+  const decisions = (r.key_decisions||[]).map(d=>`<div class="briefing-item"><span style="color:var(--blue);font-size:9px">◆</span>${d}</div>`).join('');
+
+  const card = document.createElement('div');
+  card.className = 'card summary-card';
+  card.innerHTML = `
+    <div class="card-stripe" style="background:var(--green)"></div>
+    <div class="card-inner">
+      <div class="summary-heading">Meeting Complete ✓</div>
+      <div class="summary-sub">All tasks executed · Saved to Cloud Storage</div>
+      <div class="section-title">Summary</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-bottom:14px">${r.summary||''}</div>
+      ${decisions ? `<div class="section-title">Key Decisions</div><div style="margin-bottom:14px">${decisions}</div>` : ''}
+      ${items ? `<div class="section-title">Action Items</div><div style="margin-bottom:14px">${items}</div>` : ''}
+      ${r.follow_up_emails ? `<div style="padding:8px 10px;background:var(--green-dim);border-radius:3px;border:1px solid rgba(74,222,128,0.18);font-size:10px;color:var(--green)">✓ ${Object.keys(r.follow_up_emails).length} follow-up email drafts saved to GCS</div>` : ''}
+    </div>`;
+  z.appendChild(card);
+}
+
+// ─── CARD HELPERS ─────────────────────────────────────────────────────────
+function dismissCard(btn) { dismissCardEl(btn.closest('.card')); }
+function dismissCardEl(card) {
+  if (!card) return;
   card.style.transition = 'opacity 0.2s, transform 0.2s';
   card.style.opacity = '0';
   card.style.transform = 'translateY(-8px) scale(0.97)';
   setTimeout(() => {
-    if (card.parentNode) card.parentNode.removeChild(card);
-    const zone = document.getElementById('mainZone');
-    if (zone && zone.querySelectorAll('.alert-card').length === 0 && meetingPhase === 'active') {
-      showBattlefieldStandby();
-    }
+    card.remove();
+    const z = document.getElementById('mainZone');
+    if (z && !z.querySelector('.card') && phase === 'p2') showStandby();
   }, 200);
 }
-
-function confirmTask(btn, task) {
-  const card = btn.closest('.alert-card');
+function confirmTask(btn, encoded) {
+  const task = JSON.parse(decodeURIComponent(encoded));
+  send({ type: 'task_confirmed', task });
   addTask(task);
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'task_confirmed', task }));
-  }
-  dismissAlertEl(card);
+  dismissCard(btn);
 }
 
-// ========================
-// TASKS
-// ========================
+// ─── SESSION INFO SIDEBAR ─────────────────────────────────────────────────
+function renderSessionInfo(briefing) {
+  const title = document.getElementById('inTitle')?.value || 'Meeting';
+  const chips = attendees.map((a,i)=>`<div class="attendee-chip">${i===0?'<div class="chip-dot"></div>':''}${a}</div>`).join('');
+  document.getElementById('sessionBody').innerHTML = `
+    <div class="meeting-title-text">${title}</div>
+    <div class="meeting-sub">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · Active</div>
+    <div class="stat-row"><span class="stat-lbl">Alerts</span><span class="stat-val g" id="alertStat">0</span></div>
+    <div class="stat-row"><span class="stat-lbl">Tasks</span><span class="stat-val a" id="taskStat">0</span></div>
+    <div class="stat-row"><span class="stat-lbl">Duration</span><span class="stat-val" id="durStat">00:00</span></div>
+    <hr class="divider">
+    <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;margin-bottom:6px">Attendees</div>
+    <div>${chips||'<span style="font-size:10px;color:var(--text-faint)">No attendees</span>'}</div>
+    ${briefing?.relevant_doc ? `<hr class="divider"><div style="font-family:var(--mono);font-size:8px;letter-spacing:0.1em;color:var(--text-faint);text-transform:uppercase;margin-bottom:5px">Relevant Doc</div><div style="font-size:10px;color:var(--text-dim);padding:6px 8px;background:var(--green-dim);border-radius:3px;border:1px solid rgba(74,222,128,0.15)">📄 ${briefing.relevant_doc}</div>` : ''}`;
+}
+
+// ─── TASKS ────────────────────────────────────────────────────────────────
 function addTask(task) {
-  tasks.push({ ...task, status: 'pending', id: Date.now() });
+  if (!task) return;
+  tasks.push({ ...task, id: Date.now(), done: false });
   renderTasks();
-  const count = tasks.filter(t => t.status === 'pending').length;
-  document.getElementById('taskBadge').textContent = count + ' pending';
-  if (document.getElementById('taskCount'))
-    document.getElementById('taskCount').textContent = tasks.length;
+  const el = document.getElementById('taskStat');
+  if (el) el.textContent = tasks.length;
+  document.getElementById('taskBadge').textContent = tasks.filter(t=>!t.done).length + ' pending';
 }
-
 function renderTasks() {
-  const list = document.getElementById('taskList');
-  if (tasks.length === 0) {
-    list.innerHTML = `<div style="text-align:center;padding:30px 0;opacity:0.3;font-family:var(--mono);font-size:10px;color:var(--text-dim)">No tasks logged</div>`;
-    return;
-  }
-  list.innerHTML = tasks.map((t, i) => `
-    <div class="task-item ${t.status}" id="task_${t.id}">
-      <div class="task-owner">${t.owner || 'Unassigned'}</div>
-      <div class="task-desc">${t.description || 'No description'}</div>
+  const body = document.getElementById('taskBody');
+  if (!tasks.length) { body.innerHTML = '<div class="empty"><div class="empty-lbl">No tasks yet</div></div>'; return; }
+  body.innerHTML = tasks.map(t=>`
+    <div class="task-item ${t.done?'done':''}" id="task_${t.id}">
+      <div class="task-owner">${t.owner||'Unassigned'}</div>
+      <div class="task-desc">${t.description||''}</div>
       <div class="task-meta">
-        <span class="task-deadline">${t.deadline || 'No deadline'}</span>
-        ${t.status === 'pending' ?
-          `<button class="task-confirm-btn" onclick="markTaskDone(${t.id})">✓ Done</button>` :
-          `<span style="font-family:var(--mono);font-size:9px;color:var(--green)">✓ confirmed</span>`}
+        <span class="task-due">${t.deadline||'No deadline'}</span>
+        ${t.done ? '<span style="font-family:var(--mono);font-size:9px;color:var(--green)">✓ done</span>' : `<button class="task-done-btn" onclick="markDone(${t.id})">✓ Done</button>`}
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
+}
+function markDone(id) {
+  const t = tasks.find(t=>t.id===id);
+  if (t) t.done = true;
+  renderTasks();
+  document.getElementById('taskBadge').textContent = tasks.filter(t=>!t.done).length + ' pending';
 }
 
-function markTaskDone(id) {
-  const t = tasks.find(t => t.id === id);
-  if (t) { t.status = 'confirmed'; renderTasks(); }
-  const count = tasks.filter(t => t.status === 'pending').length;
-  document.getElementById('taskBadge').textContent = count + ' pending';
-}
-
-// ========================
-// TRANSCRIPT
-// ========================
-function addTranscriptLine(speaker, text, isSystem = false) {
-  transcriptLines.unshift({ speaker, text, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) });
-  document.getElementById('transcriptBadge').textContent = transcriptLines.length + ' lines';
-
-  const feed = document.getElementById('transcriptFeed');
-  // Clear placeholder
-  if (feed.querySelector('[style]') && transcriptLines.length === 1) feed.innerHTML = '';
-
+// ─── TRANSCRIPT ───────────────────────────────────────────────────────────
+function addT(speaker, text, sys=false) {
+  const feed = document.getElementById('tFeed');
+  if (feed.querySelector('.empty')) feed.innerHTML = '';
+  tLines++;
+  document.getElementById('tBadge').textContent = tLines + ' lines';
+  const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const line = document.createElement('div');
-  line.className = 'transcript-line';
-  line.innerHTML = `
-    <span class="t-speaker" style="${isSystem ? 'color:var(--red)' : ''}">${speaker}</span>
-    <span class="t-text">${text}</span>
-    <span class="t-time">${transcriptLines[0].time}</span>
-  `;
+  line.className = 't-line' + (sys?' sys':'');
+  line.innerHTML = `<span class="t-speaker">${speaker}</span><span class="t-text">${text}</span><span class="t-time">${t}</span>`;
   feed.insertBefore(line, feed.firstChild);
+  // keep max 100
+  while (feed.children.length > 100) feed.removeChild(feed.lastChild);
 }
 
-// ========================
-// AUDIO
-// ========================
+// ─── AUDIO ────────────────────────────────────────────────────────────────
 async function toggleAudio() {
-  if (isAudioActive) {
-    stopAudio();
-  } else {
-    await startAudio();
-  }
+  if (isAudio) stopAudio(); else await startAudio();
 }
-
 async function startAudio() {
   try {
-    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(audioStream);
-    const processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-    source.connect(processor);
-    processor.connect(audioContext.destination);
-
-    processor.onaudioprocess = e => {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new AudioContext({ sampleRate: 16000 });
+    const src = audioCtx.createMediaStreamSource(audioStream);
+    const proc = audioCtx.createScriptProcessor(4096, 1, 1);
+    src.connect(proc);
+    proc.connect(audioCtx.destination);
+    proc.onaudioprocess = e => {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      const input = e.inputBuffer.getChannelData(0);
-      const pcm = floatTo16BitPCM(input);
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(pcm)));
-      ws.send(JSON.stringify({ type: 'audio_chunk', audio: b64 }));
+      const buf = floatToPCM(e.inputBuffer.getChannelData(0));
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      send({ type: 'audio_chunk', audio: b64 });
     };
-
-    isAudioActive = true;
+    isAudio = true;
     document.getElementById('audioBtn').textContent = '🔴 Audio Active';
     document.getElementById('audioBtn').style.background = 'var(--red-dim)';
-    document.getElementById('waveform').style.display = 'flex';
-  } catch (e) {
-    console.error('Mic error:', e);
-    addTranscriptLine('SYSTEM', 'Microphone access denied', true);
-  }
+    document.getElementById('waveWrap').style.display = 'flex';
+    document.getElementById('timer').classList.add('live');
+  } catch(e) { addT('SYSTEM', 'Mic access denied: ' + e.message, true); }
 }
-
 function stopAudio() {
-  if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
-  if (audioContext) { audioContext.close(); audioContext = null; }
-  isAudioActive = false;
+  if (audioStream) { audioStream.getTracks().forEach(t=>t.stop()); audioStream=null; }
+  if (audioCtx) { audioCtx.close(); audioCtx=null; }
+  isAudio = false;
   document.getElementById('audioBtn').textContent = '🎤 Enable Audio';
   document.getElementById('audioBtn').style.background = '';
-  document.getElementById('waveform').style.display = 'none';
+  document.getElementById('waveWrap').style.display = 'none';
+  document.getElementById('timer').classList.remove('live');
 }
-
-function floatTo16BitPCM(float32Array) {
-  const buffer = new ArrayBuffer(float32Array.length * 2);
-  const view = new DataView(buffer);
-  for (let i = 0; i < float32Array.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32Array[i]));
-    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+function floatToPCM(f32) {
+  const buf = new ArrayBuffer(f32.length*2);
+  const view = new DataView(buf);
+  for (let i=0; i<f32.length; i++) {
+    const s = Math.max(-1,Math.min(1,f32[i]));
+    view.setInt16(i*2, s<0 ? s*0x8000 : s*0x7FFF, true);
   }
-  return buffer;
+  return buf;
 }
 
-// ========================
-// SCREEN CAPTURE
-// ========================
-async function toggleScreenCapture() {
-  if (isScreenActive) {
-    stopScreenCapture();
-  } else {
-    await startScreenCapture();
-  }
+// ─── SCREEN ───────────────────────────────────────────────────────────────
+async function toggleScreen() {
+  if (isScreen) stopScreen(); else await startScreen();
 }
-
-async function startScreenCapture() {
+async function startScreen() {
   try {
-    screenCaptureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    isScreenActive = true;
-    document.getElementById('screenShareBtn').textContent = '🟩 Screen Analysis: On';
-
-    // Capture frames every 5s
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    isScreen = true;
+    document.getElementById('screenBtn').textContent = '🟩 Screen Analysis On';
     const video = document.createElement('video');
-    video.srcObject = screenCaptureStream;
+    video.srcObject = screenStream;
     video.play();
-
-    const captureFrame = () => {
-      if (!isScreenActive) return;
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280; canvas.height = 720;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const b64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'screen_update', screenshot: b64 }));
-      }
-      setTimeout(captureFrame, 5000);
+    const cap = () => {
+      if (!isScreen) return;
+      const c = document.createElement('canvas');
+      c.width=1280; c.height=720;
+      c.getContext('2d').drawImage(video,0,0,1280,720);
+      const b64 = c.toDataURL('image/jpeg',0.65).split(',')[1];
+      send({ type: 'screen_update', screenshot: b64 });
+      setTimeout(cap, 5000);
     };
-    video.onloadedmetadata = captureFrame;
-  } catch (e) {
-    console.error('Screen capture error:', e);
+    video.onloadedmetadata = cap;
+  } catch(e) { console.error(e); }
+}
+function stopScreen() {
+  if (screenStream) { screenStream.getTracks().forEach(t=>t.stop()); screenStream=null; }
+  isScreen = false;
+  document.getElementById('screenBtn').textContent = '⬜ Screen Analysis Off';
+}
+
+// ─── END MEETING ──────────────────────────────────────────────────────────
+function endMeeting() {
+  send({ type: 'meeting_end' });
+  stopAudio();
+  stopScreen();
+  document.getElementById('endBtn').disabled = true;
+  if (isDemo) {
+    setPhase('p3');
+    showP3Progress();
+    setTimeout(() => {
+      showSummary({
+        summary: 'The team aligned on Q2 targets with a revised revenue goal of $2.4M. Headcount was approved for up to 8 new hires. Competitor funding was noted as a strategic risk to address in the next sprint.',
+        key_decisions: ['Revenue target revised to $2.4M (not $2.8M)', 'Headcount approved: up to 8 hires', 'Pricing floor confirmed at $89/seat'],
+        action_items: [
+          { owner: 'Alice', description: 'Send updated roadmap to all attendees', deadline: 'EOD Friday', priority: 'high' },
+          { owner: 'Bob', description: 'Prepare competitor analysis for next review', deadline: 'Next Monday', priority: 'medium' },
+          { owner: 'Carol', description: 'Update headcount model with approved numbers', deadline: 'This week', priority: 'medium' }
+        ],
+        follow_up_emails: { Alice: '...', Bob: '...', Carol: '...' }
+      });
+    }, 3500);
   }
 }
 
-function stopScreenCapture() {
-  if (screenCaptureStream) { screenCaptureStream.getTracks().forEach(t => t.stop()); screenCaptureStream = null; }
-  isScreenActive = false;
-  document.getElementById('screenShareBtn').textContent = '⬜ Screen Analysis: Off';
-}
-
-// ========================
-// END MEETING
-// ========================
-function endMeeting() {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  stopAudio();
-  stopScreenCapture();
-  ws.send(JSON.stringify({ type: 'meeting_end' }));
-}
-
-function showPhase3Progress(msg) {
-  const zone = document.getElementById('mainZone');
-  zone.innerHTML = `
-    <div style="width:100%;max-width:500px;margin-top:20px;animation:slide-in 0.35s cubic-bezier(0.16,1,0.3,1)">
-      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;color:var(--amber);text-transform:uppercase;margin-bottom:16px">Phase 3 — Post Meeting Executor</div>
-      <div class="progress-steps" id="phase3Steps">
-        <div class="progress-step"><div class="step-icon"><div class="loading-ring" style="width:12px;height:12px"></div></div><div class="step-text">Generating meeting summary</div><div class="step-status active">Running</div></div>
-        <div class="progress-step"><div class="step-icon">○</div><div class="step-text">Extracting action items with owners</div><div class="step-status">Queued</div></div>
-        <div class="progress-step"><div class="step-icon">○</div><div class="step-text">Drafting follow-up emails per attendee</div><div class="step-status">Queued</div></div>
-        <div class="progress-step"><div class="step-icon">○</div><div class="step-text">Saving everything to Cloud Storage</div><div class="step-status">Queued</div></div>
-      </div>
-    </div>
-  `;
-}
-
-function showSummary(result) {
-  if (!result) return;
-  const zone = document.getElementById('mainZone');
-
-  const actionItems = (result.action_items || []).map(item => `
-    <div class="action-item">
-      <span class="action-owner-tag">${item.owner || '?'}</span>
-      <span class="action-text">${item.description || item.task || ''}</span>
-      <span class="action-due">${item.deadline || ''}</span>
-    </div>
-  `).join('');
-
-  zone.innerHTML = `
-    <div class="summary-card" style="width:100%;max-width:600px">
-      <div class="alert-stripe" style="background:var(--green)"></div>
-      <div class="summary-header">
-        <div>
-          <div class="summary-title">Meeting Complete</div>
-          <div class="summary-sub">All tasks executed — results below</div>
-        </div>
-        <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--green)">✓ Saved to GCS</div>
-      </div>
-      <div class="summary-body">
-        <div class="summary-section">
-          <div class="summary-section-title">Summary</div>
-          <div style="font-size:12px;color:var(--text-dim);line-height:1.7">${result.summary || 'Meeting summary generated.'}</div>
-        </div>
-        ${actionItems ? `
-        <div class="summary-section">
-          <div class="summary-section-title">Action Items</div>
-          ${actionItems}
-        </div>` : ''}
-        ${result.follow_up_emails ? `
-        <div class="summary-section">
-          <div class="summary-section-title">Follow-up Emails</div>
-          <div style="font-size:11px;color:var(--green)">✓ ${Object.keys(result.follow_up_emails).length} drafts sent to Cloud Storage</div>
-        </div>` : ''}
-      </div>
-    </div>
-  `;
-}
-
-// ========================
-// TIMER
-// ========================
+// ─── TIMER ────────────────────────────────────────────────────────────────
 function startTimer() {
-  timerSeconds = 0;
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timerSeconds++;
-    const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
-    const s = String(timerSeconds % 60).padStart(2, '0');
-    document.getElementById('timer').textContent = `${m}:${s}`;
-    if (document.getElementById('durationStat'))
-      document.getElementById('durationStat').textContent = `${m}:${s}`;
+  timerSec = 0;
+  clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    timerSec++;
+    const m = String(Math.floor(timerSec/60)).padStart(2,'0');
+    const s = String(timerSec%60).padStart(2,'0');
+    document.getElementById('timer').textContent = m+':'+s;
+    const d = document.getElementById('durStat');
+    if (d) d.textContent = m+':'+s;
   }, 1000);
 }
+function stopTimer() { clearInterval(timerInt); }
 
-function stopTimer() {
-  clearInterval(timerInterval);
-  document.getElementById('timer').classList.remove('active');
-}
+// ─── DEMO MODE ────────────────────────────────────────────────────────────
+function runDemo(title) {
+  setPhase('p1');
+  showLoading('Preparing briefing...', 'Reading meeting documents and past notes');
+  attendees = attendees.length ? attendees : ['Alice','Bob','Carol'];
+  renderSessionInfo({});
 
-// ========================
-// DEMO MODE (when WS unavailable)
-// ========================
-function simulateDemoMode(meetingInfo) {
-  setWsStatus('connected'); // demo
-  document.getElementById('endBtn').disabled = false;
-  document.getElementById('audioBtn').disabled = false;
-  document.getElementById('screenShareBtn').disabled = false;
-  startTimer();
-
-  // Simulate phase 1
   setTimeout(() => {
-    handleMessage({ type: 'phase1_starting' });
-    setTimeout(() => {
-      handleMessage({
-        type: 'phase1_complete',
-        briefing: {
-          spoken_brief: `Your meeting "${meetingInfo.title}" is starting in 5 minutes. ${meetingInfo.attendees?.[0] || 'Key stakeholder'} is known to push on pricing. The Q3 report shows $2.4M revenue.`,
-          key_context: ['Q3 Revenue was $2.4M (not $2.8M cited last meeting)', 'Headcount budget approved up to 8 hires', 'Competitor raised Series C — $45M'],
-          watch_out_for: ['Pricing pressure from stakeholders', 'Unconfirmed headcount numbers'],
-          relevant_doc: 'Q3_Financial_Report_2025.pdf',
-          attendee_notes: meetingInfo.attendees?.map(a => ({ name: a, note: 'Key decision maker' })) || []
-        }
-      });
-    }, 2000);
-  }, 500);
+    setPhase('p2');
+    showBriefing({
+      spoken_brief: `Your meeting "${title}" is starting now. Key watch: revenue figure is $2.4M not $2.8M. Alice is likely to push on pricing. Headcount budget is approved up to 8 hires.`,
+      key_context: ['Q3 Revenue: $2.4M — correct figure (not $2.8M)', 'Headcount budget approved: up to 8 hires', 'Competitor Nexus raised $45M Series C last week'],
+      watch_out_for: ['Pricing pressure — floor is $89/seat, do not go below', 'Unconfirmed headcount numbers being cited'],
+      relevant_doc: 'Q3_Financial_Report_2025.pdf',
+      attendee_notes: [{ name: 'Alice', note: 'CFO — will challenge revenue numbers' }, { name: 'Bob', note: 'VP Sales — key decision maker on pricing' }]
+    });
+    renderSessionInfo({ relevant_doc: 'Q3_Financial_Report_2025.pdf' });
+  }, 2200);
 
-  // Simulate alerts during meeting
-  const demoAlerts = [
-    { delay: 12000, msg: { type: 'overlay_alert', alert: { show_overlay: true, layer: 'fact_shield', title: 'Revenue Figure Mismatch', message: 'Speaker said "$2.8M revenue" — actual Q3 figure is $2.4M per the CFO report.', source: 'Q3_Financial_Report_2025.pdf', urgency: 'high' }}},
-    { delay: 22000, msg: { type: 'overlay_alert', alert: { show_overlay: true, layer: 'question_anticipator', title: 'Pricing Question Likely', message: 'Based on agenda, expect question about 2026 pricing strategy. Your approved floor is $89/seat.', source: 'Pricing_Strategy_2026.docx', urgency: 'medium' }}},
-    { delay: 35000, msg: { type: 'overlay_alert', alert: { show_overlay: true, layer: 'task_logger', title: 'Task Assigned', message: 'Tap to confirm: "Send updated roadmap to all attendees by EOD Friday"', task: { description: 'Send updated roadmap to all attendees', owner: meetingInfo.attendees?.[0] || 'You', deadline: 'EOD Friday', priority: 'high' }, urgency: 'medium' }}},
-    { delay: 48000, msg: { type: 'overlay_alert', alert: { show_overlay: true, layer: 'negotiation', title: 'Negotiation Boundary', message: 'Discount request detected. Past agreed max was 15%. Current request appears to be ~20%. Hold firm per exec guidance.', source: 'Deal_History_2024.csv', urgency: 'high' }}}
+  const demoEvents = [
+    { t: 6000, fn: () => addT('Alice', 'Let\'s start. Can we confirm Q3 revenue — I have $2.8M in my notes.') },
+    { t: 10000, fn: () => showAlert({ show_overlay:true, layer:'fact_shield', title:'Revenue Figure Mismatch', message:'Alice said $2.8M — actual Q3 figure from CFO report is $2.4M. Correct this now.', source:'Q3_Financial_Report_2025.pdf', urgency:'high' }) },
+    { t: 11000, fn: () => addT('Bob', 'That matches what I have too — $2.8M.') },
+    { t: 18000, fn: () => addT('Carol', 'What\'s our pricing stance for 2026? Are we holding at $89/seat?') },
+    { t: 22000, fn: () => showAlert({ show_overlay:true, layer:'question_anticipator', title:'Pricing Question', message:'Your approved floor is $89/seat. Do not go below without exec sign-off. Past agreed discount max: 15%.', source:'Pricing_Strategy_2026.docx', urgency:'medium' }) },
+    { t: 24000, fn: () => addT('Alice', 'We need to discuss the headcount plan — I heard we\'re approved for 12 hires?') },
+    { t: 34000, fn: () => addT('Bob', 'Can you send the updated roadmap to everyone by EOD Friday?') },
+    { t: 37000, fn: () => showAlert({ show_overlay:true, layer:'task_logger', title:'Task Assigned', message:'Bob asked someone to send the updated roadmap to all attendees by EOD Friday.', task:{ description:'Send updated roadmap to all attendees', owner:'Alice', deadline:'EOD Friday', priority:'high' }, urgency:'medium' }) },
+    { t: 46000, fn: () => addT('Carol', 'We\'d need at least a 20% discount to close this quarter.') },
+    { t: 50000, fn: () => showAlert({ show_overlay:true, layer:'negotiation', title:'Negotiation Boundary Hit', message:'20% discount requested — exceeds approved max of 15%. Past deals never exceeded 12%. Hold firm.', source:'Deal_History_2024.csv', urgency:'high' }) },
+    { t: 55000, fn: () => addT('Bob', 'Let\'s take this offline. I think we\'re aligned on the key points.') },
   ];
 
-  // Simulate transcript
-  const transcriptDemo = [
-    { delay: 6000, speaker: 'Speaker A', text: 'Thanks everyone for joining. Let me pull up the Q3 financials…' },
-    { delay: 9000, speaker: 'Speaker B', text: 'Before we start, can we confirm the revenue was $2.8M last quarter?' },
-    { delay: 13000, speaker: 'Speaker A', text: 'Yeah, $2.8M. We exceeded targets.' },
-    { delay: 25000, speaker: 'Speaker C', text: 'What\'s the plan for pricing in 2026? Are we holding at $89?' },
-    { delay: 38000, speaker: 'Speaker A', text: 'Can you send the updated roadmap to everyone by Friday?' },
-    { delay: 52000, speaker: 'Speaker B', text: 'We\'d need at least a 20% discount to move forward this quarter.' }
-  ];
-
-  demoAlerts.forEach(({ delay, msg }) => setTimeout(() => handleMessage(msg), delay));
-  transcriptDemo.forEach(({ delay, speaker, text }) => setTimeout(() => addTranscriptLine(speaker, text), delay));
+  demoEvents.forEach(({ t, fn }) => setTimeout(fn, t));
 }
 </script>
 </body>
-</html>cd
+</html>
